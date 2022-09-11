@@ -1,0 +1,128 @@
+#- the function "propnew" gives the bandwidth estimator for banding and tapering estimators. Other functions are needed for "propnew".
+ 
+weight = function(kh, k){
+# Tapering weight function
+    w = c()
+    for (j in 1 : (k + 1)){
+        d = j - 1
+        w[j] = kh^(-1) * ((2 * kh - d) * ((2 * kh) > d) - (kh - d) * (kh > d))
+    }
+    return(w)  
+}
+ 
+P = function(m, n){
+# Permutation function
+    s = 1
+    for (i in 1 : m){
+        s = s * (n - (i - 1))
+    }
+return(s)
+}
+ 
+adT = function(x){
+# compute the total summation term
+    M = dim(x)
+    a = matrix(1, 1, M[1])
+    A = t(a %*% x)
+    B = sum(diag(x %*% t(x)))
+    mf22 = t(A) %*% A - B
+    mf1 = 1 / P(2, M[1]) + 2 / P(3, M[1]) + 2 / P(4, M[1])
+    mf2 = 1 / P(4, M[1])
+    mf3 = 2 / P(3, M[1]) + 4 / P(4, M[1])
+    t1 = 0
+    s1 = 0
+    for (i in 1 : M[1]){
+        t2 = 0
+            s2 = 0
+            temp1 = x[i, ]
+            for (j in 1 : M[1]){
+                temp2 = x[j, ]
+                t2 = mf1 * sum(temp1*temp2)^2 + mf2 * mf22 * sum(temp1 * temp2) - mf3 * sum(temp1 * temp2) * sum(temp2 * A) + mf3 * sum(temp1 * temp2) * sum(temp2 * temp2)
+                s2 = s2 + t2
+            }
+        t1 = s2 - (mf1 * sum(temp1 * temp1)^2 + mf2 * mf22 * sum(temp1 * temp1) - mf3 * sum(temp1 * temp1) * sum(temp1 * A) + mf3 * sum(temp1 * temp1) * sum(temp1 * temp1))
+        s1 = s1 + t1
+    }
+return(s1) 
+}
+ 
+bandpen1 = function(x, i, j, q){
+    M = dim(x)
+    temp1 = 0
+    sband1 = 0
+    temppen1 = 0
+    penalty1 = 0
+    mfb1 = 1 / P(2, M[1]) + 2 / P(3, M[1]) + 2 / P(4, M[1])
+    mfb2 = 2 / P(3, M[1]) + 3 / P(4, M[1])
+    mfb3 = 1 / P(4, M[1])
+    C1 = 1 / P(2, M[1]) + 2 / P(3, M[1]) + 1 / P(4, M[1])
+    C2 = 1 / P(3, M[1]) + 1 / P(4, M[1])
+    C3 = 1 / P(3, M[1]) + 2 / P(4, M[1])
+    C4 = 1 / P(4, M[1])
+    for (n in 1: (M[2] - q)){
+        temp1 = mfb1 * x[i, n] * x[j, n+q] * x[j, n] * x[i, n+q] + mfb2 * (x[i, n] * (x[j, n+q]^2) * x[j, n] - x[i, n] * x[j, n+q] * x[j, n] * sum(x[, n+q])) + mfb3 * (x[i, n] * x[j, n+q] * sum(x[, n]) * sum(x[, n+q]) + x[i,n]^2 * x[j,n+q]^2 - x[i,n]^2 * x[j,n+q] * sum(x[, n+q]) - x[i,n] * x[j,n+q]^2 * sum(x[, n]))
+        sband1 = sband1 + temp1
+        sum1 = sum(x[, n] * x[, n+q])
+        part1 = C1 * (x[i, n]^2) * (x[j, n+q]^2)
+        part2 = - C2 * (x[i, n] * (x[j, n+q]^2) * sum(x[, n]) + (x[i, n]^2) * x[j, n+q] * sum(x[, n+q]))
+        part3 = C3 * (x[i, n] * x[j, n] * (x[j, n+q]^2) + x[i, n+q] * x[j, n+q] * (x[j, n]^2))
+        part4 = C4 * (x[i, n] * x[j, n+q] * sum(x[, n]) * sum(x[, n+q]) + x[i, n] * x[i, n+q] * x[j, n] * x[j, n+q] - x[i, n] * x[j, n] * x[j, n+q] * sum(x[, n+q]) - x[i, n] * x[i, n+q] * x[j, n+q] * sum(x[, n]) - x[i, n] * x[j, n+q] * sum1)
+        temppen1 = part1 + part2 + part3 + part4
+        penalty1 = penalty1 + temppen1
+    }
+return(c(sband1, penalty1))
+}
+ 
+bandpen2 = function(x, q){
+    M = dim(x)
+    temp2 = 0
+    sbandpen2 = 0
+    for (i in 1 : M[1]){
+        temp3 = 0
+        sbandpen3 = 0
+        for (j in 1 : M[1]){
+            temp3 = bandpen1(x, i, j, q)
+            sbandpen3 = sbandpen3 + temp3
+        }
+        temp2 = sbandpen3 - bandpen1(x, i, i, q)
+        sbandpen2 = sbandpen2 + temp2
+    }
+    return(sbandpen2)
+}
+ 
+bandpen = function(x, K){
+    sbandpen4 = matrix(0, K + 1, 2)
+    sbandpen4[1, ] = bandpen2(x, 0)
+    for (l in 1 : K){
+        sbandpen4[l + 1, ] = 2 * bandpen2(x, l)
+    }
+    return(sbandpen4)
+}
+ 
+lossnew = function(x, K){
+    M = dim(x)
+    tempres = bandpen(x, K)
+    bandloss = c()
+    tapeloss = c()
+    tapeloss[1] = M[2]^(-1) * (adT(x) - tempres[1, 1]) + M[1]^(-1) * M[2]^(-1) * tempres[1, 2]
+    for (i in 1 : (K + 1)){
+        bandloss[i] = M[2]^(-1) * (adT(x) - sum(tempres[1 : i, 1])) + M[1]^(-1) * M[2]^(-1) * sum(tempres[1 : i, 2])
+        if (i <= (K / 2)){
+            wgttape = 1 - (1 - weight(i, K))^2
+            wgtpen = weight(i, K)^2
+            tapeloss[i+1] = M[2]^(-1) * (adT(x) - sum(wgttape * tempres[, 1])) + M[1]^(-1) * M[2]^(-1) * sum(wgtpen * tempres[, 2])
+        }
+    }
+    return(c(bandloss, tapeloss))
+}
+ 
+propnew = function(X, K){
+#- X is the data matrix; K is the number of bandwidths searched (namely, we search the minimum over bandwidth from 0 to k); the first output gives the bandwidth estimator for banding estimation, and the second one is for tapering estimation.
+    resprop = lossnew(X, K)
+    L = length(resprop)
+    bandprop = resprop[1 : (K + 1)]
+    tapeprop = resprop[(K + 2) : L]
+    IXband = order(bandprop)[1]
+    IXtape = order(tapeprop)[1]
+    return(c(IXband, IXtape))
+}

@@ -1,0 +1,10 @@
+Package: bandcov
+Type: Package
+Title: Bandwidth Test and Estimation for Covariance Matrix Estimation
+Version: 1.0
+Date: 2017-04-06
+Author: Yumou Qiu and Jason Adams
+Maintainer: Jason Adams <jadams19@unl.edu>
+Description: This package was created to implement the testing and estimation procedures given by Qiu and Chen regarding the banding and tapering of covariance matrices. The main functions in this package give a test statistic for testing whether a given bandwidth is appropriate for the covariance matrix, estimates of the Frobenius loss from both banding and tapering for specified bandwidths, the bandwidth in a range of given bandwidths that provides the minimum Frobenius loss for both banding and tapering, and plots to aid in bandwidth estimation. 
+License: GPL-2
+LazyData: true
